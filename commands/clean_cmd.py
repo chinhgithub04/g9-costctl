@@ -41,12 +41,39 @@ VERIFY
 """
 import boto3
 
-from commands._common import parse_kv
+from commands._common import parse_kv, tags_to_dict
 
 
 def _find_targets(tag_key, tag_val):
     """Return {"ec2": [...], "volume": [...]} matching tag in non-terminal state."""
-    raise NotImplementedError("TODO: implement _find_targets — see test_clean.py")
+    ec2 = boto3.client("ec2")
+    
+    # Find EC2 instances
+    ec2_targets = []
+    inst_paginator = ec2.get_paginator("describe_instances")
+    for page in inst_paginator.paginate():
+        for reservation in page.get("Reservations", []):
+            for instance in reservation.get("Instances", []):
+                state = instance["State"]["Name"]
+                if state in ("shutting-down", "terminated"):
+                    continue
+                tags = tags_to_dict(instance.get("Tags", []))
+                if tags.get(tag_key) == tag_val:
+                    ec2_targets.append(instance["InstanceId"])
+                    
+    # Find EBS volumes
+    vol_targets = []
+    vol_paginator = ec2.get_paginator("describe_volumes")
+    for page in vol_paginator.paginate():
+        for vol in page.get("Volumes", []):
+            state = vol["State"]
+            if state != "available":
+                continue
+            tags = tags_to_dict(vol.get("Tags", []))
+            if tags.get(tag_key) == tag_val:
+                vol_targets.append(vol["VolumeId"])
+                
+    return {"ec2": ec2_targets, "volume": vol_targets}
 
 
 def run(args):
@@ -56,4 +83,42 @@ def run(args):
         args.tag    — "key=value" string (REQUIRED)
         args.apply  — bool, must be True to actually delete (default False = dry-run)
     """
-    raise NotImplementedError("TODO: implement run() — see module docstring")
+    from botocore.exceptions import ClientError
+    tag_key, tag_val = parse_kv(args.tag)
+    
+    try:
+        targets = _find_targets(tag_key, tag_val)
+    except ClientError as e:
+        code = e.response.get("Error", {}).get("Code", "Unknown")
+        msg = e.response.get("Error", {}).get("Message", str(e))
+        print(f"AWS error [{code}]: {msg}")
+        return
+
+    if not targets["ec2"] and not targets["volume"]:
+        print("Nothing to clean.")
+        return
+        
+    if targets["ec2"]:
+        print(f"EC2 instances to terminate: {', '.join(targets['ec2'])}")
+    if targets["volume"]:
+        print(f"EBS volumes to delete: {', '.join(targets['volume'])}")
+        
+    if not args.apply:
+        print(f"Plan summary: {len(targets['ec2'])} EC2 instance(s), {len(targets['volume'])} volume(s) to clean.")
+        print("This is a dry-run. Pass --apply to actually delete.")
+        return
+        
+    ec2 = boto3.client("ec2")
+    try:
+        if targets["ec2"]:
+            ec2.terminate_instances(InstanceIds=targets["ec2"])
+            print(f"Terminated EC2 instances: {', '.join(targets['ec2'])}")
+            
+        if targets["volume"]:
+            for vol_id in targets["volume"]:
+                ec2.delete_volume(VolumeId=vol_id)
+            print(f"Deleted EBS volumes: {', '.join(targets['volume'])}")
+    except ClientError as e:
+        code = e.response.get("Error", {}).get("Code", "Unknown")
+        msg = e.response.get("Error", {}).get("Message", str(e))
+        print(f"AWS error [{code}]: {msg}")
