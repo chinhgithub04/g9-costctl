@@ -32,7 +32,7 @@ You're done when all 25 pass.
 
 ```bash
 # 1. Fork / clone
-git clone <your-fork-url> g<N>-costctl && cd g<N>-costctl
+git clone <your-fork-url> g9-costctl && cd g9-costctl
 
 # 2. Install
 make install-dev                   # or: pip install -r requirements-dev.txt
@@ -271,20 +271,20 @@ Add a `REFLECTIONS.md` to your repo. Sample prompts:
 
 ## Submission checklist (W6 side challenge)
 
-- [ ] Fork → rename to `g<N>-costctl` → clone locally
-- [ ] `make install-dev && make test` shows 10 passed at start
-- [ ] Implement `list` → `pytest tests/test_list.py` all green (7 more pass)
-- [ ] Implement ≥ 2 of (`cost`, `terminate`, `tag`) — `terminate` tests green if you pick it
-- [ ] (optional stretch) `clean` → `pytest tests/test_clean.py` green; or `idle` / `migrate-gp3`
-- [ ] `make test` final score reported in README (e.g. "21/25 passing")
-- [ ] Replace `sample_output/*_example.txt` with real outputs from your account
-- [ ] `REFLECTIONS.md` with 2+ answers
-- [ ] At least 3 meaningful commits (init → first command working → final polish)
-- [ ] Replace `g<N>` placeholders throughout README with your real group number
-- [ ] Add Team section with member names
-- [ ] Tag: `git tag w6-sidechallenge-v1 && git push --tags`
-- [ ] Post link in Slack `#w6-sidechallenge` thread:
-      `G<N> — <repo-url> — implemented: list, cost, terminate (21/25 tests passing)`
+- [x] Fork → rename to `g9-costctl` → clone locally
+- [x] `make install-dev && make test` shows 10 passed at start
+- [x] Implement `list` → `pytest tests/test_list.py` all green (7 more pass)
+- [x] Implement ≥ 2 of (`cost`, `terminate`, `tag`) — `terminate` tests green if you pick it
+- [x] (optional stretch) `clean` → `pytest tests/test_clean.py` green; or `idle` / `migrate-gp3`
+- [x] `make test` final score reported in README (25/25 passing)
+- [x] Replace `sample_output/*_example.txt` with real outputs from your account (Note: cost explorer outputs return $0.00 because AWS Cost Allocation Tags are disabled/restricted in the workshop account)
+- [x] `REFLECTIONS.md` with 2+ answers
+- [x] At least 3 meaningful commits (init → first command working → final polish)
+- [x] Replace `g<N>` placeholders throughout README with your real group number (Group 9 updated)
+- [x] Add Team section with member names
+- [x] Tag: `git tag w6-sidechallenge-v1 && git push --tags`
+- [x] Post link in Slack `#w6-sidechallenge` thread:
+      `G9 — <repo-url> — implemented: list, cost, terminate, tag, clean, idle, migrate-gp3 (25/25 tests passing)`
 
 Reminder: **OPTIONAL and does NOT count toward W6 score.** Recognition is
 separate (Slack callout / Phase 2 selection / portfolio).
@@ -297,13 +297,33 @@ MIT — see `LICENSE`.
 
 ---
 
+## Evidence of Correctness
+
+### 1. Pytest Results (25/25 Tests Passing)
+Below is the verification showing all unit and integration tests passing successfully (including all Core and Stretch command tests):
+
+![25/25 Pytest Verification](evidence/tests_pass.png)
+
+### 2. Live AWS Execution (EC2 Resource Discovery)
+Below is the actual text output of `./costctl.py list ec2` running against our AWS workshop environment:
+
+```text
+EC2 (no filter) — 3 found:
+------------------------------------------------------------------------------
+  i-0e0ad7693aa1a181a       t3.micro       stopped       Environment=dev Name=my-ec2-test keep=false
+  i-00ecf42abc7a736a3       t3.small       terminated       AmazonECSManaged=true Application=Merxly Backup=true CostCenter=G9 Environment=dev Name=xbrain-ecs-us-dev Owner=team9xbrain@email.com aws:autoscaling:groupName=xbrain-ecs-asg-us-dev aws:ec2launchtemplate:id=lt-06366ccd1d361ad07 aws:ec2launchtemplate:version=1 keep=true
+  i-0a18937bb5970fe48       t3.small       terminated       AmazonECSManaged=true Application=Merxly Backup=true CostCenter=G9 Environment=us-dev Name=xbrain-ecs-us-dev Owner=team9xbrain@email.com aws:autoscaling:groupName=xbrain-ecs-asg-us-dev aws:ec2launchtemplate:id=lt-06366ccd1d361ad07 aws:ec2launchtemplate:version=1 keep=true
+```
+
+And below is the terminal execution visual screenshot proof:
+
+![Live AWS Run Proof](evidence/list_ec2_proof.png)
+
+---
+
 ## Team
 
-> Replace before submission:
-
-- <name 1>
-- <name 2>
-- <name 3>
+- Nguyễn Đức Chinh (XB-DN26-080)
 
 ---
 
