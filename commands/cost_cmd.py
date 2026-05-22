@@ -66,4 +66,47 @@ def run(args):
         args.tag   — "key=value" string (REQUIRED)
         args.days  — int, default 7
     """
-    raise NotImplementedError("TODO: implement cost — see module docstring")
+    from botocore.exceptions import ClientError
+    
+    tag_key, tag_value = parse_kv(args.tag)
+    
+    end_date = date.today()
+    start_date = end_date - timedelta(days=args.days)
+    
+    start_str = start_date.strftime("%Y-%m-%d")
+    end_str = end_date.strftime("%Y-%m-%d")
+    
+    ce = boto3.client("ce")
+    try:
+        resp = ce.get_cost_and_usage(
+            TimePeriod={"Start": start_str, "End": end_str},
+            Granularity="DAILY",
+            Metrics=["UnblendedCost"],
+            Filter={"Tags": {"Key": tag_key, "Values": [tag_value]}},
+            GroupBy=[{"Type": "DIMENSION", "Key": "SERVICE"}],
+        )
+        
+        service_costs = defaultdict(float)
+        total_cost = 0.0
+
+        for day in resp.get("ResultsByTime", []):
+            for group in day.get("Groups", []):
+                service_name = group["Keys"][0]
+                amount = float(group["Metrics"]["UnblendedCost"]["Amount"])
+                service_costs[service_name] += amount
+                total_cost += amount
+                
+        print(f"Cost for {args.tag} over last {args.days} days ({start_str} → {end_str}):")
+        print("-" * 60)
+        
+        sorted_services = sorted(service_costs.items(), key=lambda item: item[1], reverse=True)
+        for s_name, cost in sorted_services:
+            print(f"  {s_name:<46} $ {cost:>7.2f}")
+            
+        print("-" * 60)
+        print(f"  {'TOTAL':<46} $ {total_cost:>7.2f}")
+        
+    except ClientError as e:
+        code = e.response.get("Error", {}).get("Code", "Unknown")
+        msg = e.response.get("Error", {}).get("Message", str(e))
+        print(f"AWS error [{code}]: {msg}")
